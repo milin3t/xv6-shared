@@ -81,6 +81,36 @@ trap(struct trapframe *tf)
             cpuid(), tf->cs, tf->eip);
     lapiceoi();
     break;
+  case T_PGFLT :
+    // Page fault.
+    // The address that caused the fault is in cr2.
+    uint fault_addr = PGROUNDDOWN(rcr2());
+    if((tf->cs&3) == DPL_USER) {
+      // Check if the fault address is in valid stack region (below KERNBASE)
+      if(fault_addr >= KERNBASE || fault_addr < PGSIZE) {
+        cprintf("page fault: invalid address\n");
+        myproc()->killed = 1;
+      } else {
+        char* mem = kalloc();
+        if(mem == 0) {
+          cprintf("page fault: out of memory\n");
+          myproc()->killed = 1;
+        } else {
+          memset(mem, 0, PGSIZE);
+          if(mappages(myproc()->pgdir, (char*)fault_addr, PGSIZE, V2P(mem), PTE_W|PTE_U) < 0) {
+            cprintf("page fault: mappages failed\n");
+            kfree(mem);
+            myproc()->killed = 1;
+          } else {
+            lcr3(V2P(myproc()->pgdir));
+          }
+        }
+      }
+    } else {
+      cprintf("page fault in kernel mode\n");
+      panic("trap");
+    }
+    break;
 
   //PAGEBREAK: 13
   default:

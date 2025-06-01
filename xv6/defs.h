@@ -10,6 +10,9 @@ struct sleeplock;
 struct stat;
 struct superblock;
 
+// pte_t declaration
+typedef uint pte_t;
+
 // bio.c
 void            binit(void);
 struct buf*     bread(uint, uint);
@@ -173,6 +176,9 @@ void            uartputc(int);
 
 // vm.c
 void            seginit(void);
+// add walkpgdir, mappages
+pte_t*          walkpgdir(pde_t*, const void*, int);
+int             mappages(pde_t*, void*, uint, uint, int);
 void            kvmalloc(void);
 pde_t*          setupkvm(void);
 char*           uva2ka(pde_t*, char*);

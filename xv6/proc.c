@@ -544,6 +544,25 @@ procdump(void)
 int
 printpt(int pid)
 {
-  cprintf("[proc.c] printpt(): called with pid = %d\n", pid);
+  struct proc *p = myproc();
+  pde_t *pgdir = p->pgdir;
+
+  acquire(&ptable.lock);
+
+  cprintf("START PAGE TABLE (pid %d)\n", pid);
+
+  for (uint va = 0; va < KERNBASE; va += PGSIZE){
+    pde_t pde = pgdir[PDX(va)];
+    if (pde & PTE_P){
+      pte_t *pgtab = (pte_t*)P2V(PTE_ADDR(pde));
+      pte_t pte = pgtab[PTX(va)];
+      if (pte & PTE_P){
+        cprintf("%x P %s %s %x\n", va >> 12, (pte & PTE_U) ? "U": "K", (pte & PTE_W) ? "W" : "-", PTE_ADDR(pte) >> 12);
+      }
+    }
+    
+  }
+  cprintf("END PAGE TABLE\n");
+  release(&ptable.lock);
   return 0;
 }

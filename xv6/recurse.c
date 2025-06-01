@@ -13,17 +13,17 @@ static int recurse(int n) {
 #pragma GCC pop_options
 
 int main (int argc, char *argv[]) {
-    int n, m;
+  int n, m;
 
-    if (argc != 2) {
-        printf(1, "Usage: %s levels \n", argv[0]);
-        exit();
-    }
-    printpt(getpid());
-    n = atoi(argv[1]);
-    printf(1, "Recursing %d levels\n", n);
-    m = recurse(n);
-    printf(1, "Yielded a value of %d\n", m);
-    printpt(getpid());
-    exit();
+  if (argc != 2) {
+      printf(1, "Usage: %s levels \n", argv[0]);
+      exit();
+  }
+  printpt(getpid());
+  n = atoi(argv[1]);
+  printf(1, "Recursing %d levels\n", n);
+  m = recurse(n);
+  printf(1, "Yielded a value of %d\n", m);
+  printpt(getpid());
+  exit();
 }
