@@ -47,13 +47,6 @@ sys_sbrk(void)
 {
   int addr;
   int n;
-  
-  if(disable_sbrk)  // 플래그가 설정되었으면 바로 실패
-  {  
-    cprintf("sbrk is disabled\n");
-    disable_sbrk = 0;
-    return -1;
-  }
 
   if(argint(0, &n) < 0)
     return -1;

@@ -112,9 +112,7 @@ trap(struct trapframe *tf)
       char *mem = kalloc();
       if(mem == 0){
         cprintf("out of memory\n");
-        // only return for usertests -> memtest
-        disable_sbrk = 1;
-        // proc->killed = 1;
+        proc->killed = 1;
         return;
       }
       memset(mem, 0, PGSIZE);

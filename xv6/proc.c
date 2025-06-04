@@ -172,6 +172,12 @@ growproc(int n)
   pde_t *pde;
 
   newsz = curproc->sz + n;
+
+  if(newsz >= MAXHEAP){
+    cprintf("growproc: hip over flow %x\n", newsz);
+    return -1;
+  }
+  
   if(n > 0){
     if(PGROUNDDOWN(curproc->tf->esp) <= PGROUNDUP(newsz)){
       cprintf("growproc: hip overflow hip: %x stack %x\n", 

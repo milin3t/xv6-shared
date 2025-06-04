@@ -442,7 +442,6 @@ mem(void)
     while(m1){
       m2 = *(char**)m1;
       free(m1);
-      cprintf(1, "freeing %p\n", m1);
       m1 = m2;
     }
     m1 = malloc(1024*20);
