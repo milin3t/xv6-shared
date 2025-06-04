@@ -272,8 +272,9 @@ deallocuvm(pde_t *pgdir, uint oldsz, uint newsz)
   a = PGROUNDUP(newsz);
   for(; a  < oldsz; a += PGSIZE){
     pte = walkpgdir(pgdir, (char*)a, 0);
-    if(!pte)
+    if (!pte) {
       a = PGADDR(PDX(a) + 1, 0, 0) - PGSIZE;
+    }
     else if((*pte & PTE_P) != 0){
       pa = PTE_ADDR(*pte);
       if(pa == 0)
@@ -325,7 +326,7 @@ copyuvm(pde_t *pgdir, uint sz)
 {
   pde_t *d;
   pte_t *pte;
-  uint pa, i, flags, sp; //== modify == plus sp
+  uint pa, i, flags,sp; //== modify == plus sp
   char *mem;
 
   if((d = setupkvm()) == 0)
@@ -366,6 +367,7 @@ bad:
   freevm(d);
   return 0;
 }
+
 
 
 //PAGEBREAK!

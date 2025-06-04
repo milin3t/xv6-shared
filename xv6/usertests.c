@@ -424,6 +424,7 @@ exitwait(void)
   printf(1, "exitwait ok\n");
 }
 
+// 여기도 유심히 볼 것
 void
 mem(void)
 {
@@ -1411,6 +1412,7 @@ forktest(void)
   printf(1, "fork test OK\n");
 }
 
+// 여기 부분 검토
 void
 sbrktest(void)
 {

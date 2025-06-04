@@ -161,28 +161,70 @@ userinit(void)
 
 // Grow current process's memory by n bytes.
 // Return 0 on success, -1 on failure.
+
 int
 growproc(int n)
 {
-  uint sz;
+  uint newsz;
   struct proc *curproc = myproc();
+  pde_t *pgdir = curproc->pgdir;
+  pte_t *pgtab;
+  pde_t *pde;
 
-  sz = curproc->sz;
+  newsz = curproc->sz + n;
   if(n > 0){
-    if((sz = allocuvm(curproc->pgdir, sz, sz + n)) == 0)
-      return -1;
-  } else if(n < 0){
-    if((sz = deallocuvm(curproc->pgdir, sz, sz + n)) == 0)
-      return -1;
+    if(PGROUNDDOWN(curproc->tf->esp) <= PGROUNDUP(newsz)){
+      cprintf("growproc: hip overflow hip: %x stack %x\n", 
+              PGROUNDUP(newsz), PGROUNDDOWN(curproc->tf->esp));
+      return -1; 
+    }
+    curproc->sz = newsz;
+    return 0;
   }
-  curproc->sz = sz;
-  switchuvm(curproc);
+  else if(n < 0){//modified
+    pde = &pgdir[PDX(newsz)]; //할당 안되어있을때
+    if(*pde == 0){
+      curproc->sz = newsz;
+      return 0;
+    }
+  
+    pgtab = (pte_t*)P2V(PTE_ADDR(*pde)); //할당안되어있을때
+    if(pgtab[PTX(newsz)] == 0){
+      curproc->sz = newsz;
+      return 0;
+    }
+    
+    //되어있을때 - 기존과 동일일
+    if(((deallocuvm(curproc->pgdir, curproc->sz, curproc->sz + n)))== 0){
+      cprintf("growproc: deallocuvm failed\n");
+      return -1;
+    }
+  }
+  curproc->sz = newsz;
+  switchuvm(curproc); 
   return 0;
 }
 
 // Create a new process copying p as the parent.
 // Sets up stack to return as if from system call.
 // Caller must set state of returned proc to RUNNABLE.
+uint
+cal_alloc_sz(struct proc *p)
+{
+  uint sz = 0;
+  pde_t *pgdir = p->pgdir;
+  for(; sz < p->sz; sz += PGSIZE){
+    pde_t pde = pgdir[PDX(sz)];
+    if((pde & PTE_P) == 0)
+      break; // PDE가 없으면 break
+
+    pte_t *pgtab = (pte_t*)P2V(PTE_ADDR(pde));
+    if((pgtab[PTX(sz)] & PTE_P) == 0)
+      break; // PTE가 없으면 break
+  }
+  return sz; // 마지막으로 할당된 페이지의 크기를 반환
+}
+
 int
 fork(void)
 {
@@ -196,7 +238,7 @@ fork(void)
   }
 
   // Copy process state from proc.
-  if((np->pgdir = copyuvm(curproc->pgdir, curproc->sz)) == 0){
+  if((np->pgdir = copyuvm(curproc->pgdir, cal_alloc_sz(curproc))) == 0){
     kfree(np->kstack);
     np->kstack = 0;
     np->state = UNUSED;

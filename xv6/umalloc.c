@@ -49,8 +49,9 @@ morecore(uint nu)
   char *p;
   Header *hp;
 
-  if(nu < 4096)
-    nu = 4096;
+  // 수정
+  if(nu < 512)
+    nu = 512;
   p = sbrk(nu * sizeof(Header));
   if(p == (char*)-1)
     return 0;
@@ -66,6 +67,9 @@ malloc(uint nbytes)
   Header *p, *prevp;
   uint nunits;
 
+  if(nbytes > 32768)  // 32KB 초과는 거부
+    return 0;
+    
   nunits = (nbytes + sizeof(Header) - 1)/sizeof(Header) + 1;
   if((prevp = freep) == 0){
     base.s.ptr = freep = prevp = &base;

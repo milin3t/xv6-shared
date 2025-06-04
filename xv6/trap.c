@@ -81,35 +81,50 @@ trap(struct trapframe *tf)
             cpuid(), tf->cs, tf->eip);
     lapiceoi();
     break;
-  case T_PGFLT :
-    // Page fault.
-    // The address that caused the fault is in cr2.
-    uint fault_addr = PGROUNDDOWN(rcr2());
-    if((tf->cs&3) == DPL_USER) {
-      // Check if the fault address is in valid stack region (below KERNBASE)
-      if(fault_addr >= KERNBASE || fault_addr < PGSIZE) {
-        cprintf("page fault: invalid address\n");
-        myproc()->killed = 1;
-      } else {
-        char* mem = kalloc();
-        if(mem == 0) {
-          cprintf("page fault: out of memory\n");
-          myproc()->killed = 1;
-        } else {
-          memset(mem, 0, PGSIZE);
-          if(mappages(myproc()->pgdir, (char*)fault_addr, PGSIZE, V2P(mem), PTE_W|PTE_U) < 0) {
-            cprintf("page fault: mappages failed\n");
-            kfree(mem);
-            myproc()->killed = 1;
-          } else {
-            lcr3(V2P(myproc()->pgdir));
-          }
-        }
+  case T_PGFLT:
+    uint va = PGROUNDDOWN(rcr2());
+    struct proc *proc = myproc();
+    if(va >= KERNBASE || va < PGSIZE){
+      // Invalid address, should not happen.
+      if(proc == 0 || (tf->cs&3) == 0){
+        cprintf("unexpected trap %d from cpu %d eip %x (cr2=0x%x)\n",
+                tf->trapno, cpuid(), tf->eip, rcr2());
+        panic("trap");
       }
-    } else {
-      cprintf("page fault in kernel mode\n");
-      panic("trap");
+      // In user space, assume process misbehaved.
+      // invalid한 상황 -> silent kill
+      // cprintf("pid %d %s: trap %d err %d on cpu %d "
+      //         "eip 0x%x addr 0x%x--kill proc\n",
+      //         myproc()->pid, myproc()->name, tf->trapno,
+      //         tf->err, cpuid(), tf->eip, rcr2());
+      myproc()->killed = 1;
+      return;
     }
+
+    // In user space
+    //if between user stack and heap, one page left , consider it as a stack overflow
+    if(PGROUNDDOWN(proc->tf->esp) <= PGROUNDUP(proc->sz) ){//스택에 대해해
+      cprintf("stack overflow  stack: %x , hip : %x\n", 
+              PGROUNDDOWN(proc->tf->esp), PGROUNDUP(proc->sz));
+      panic("stack overflow");
+    }
+    else{//allocate a new page for heap
+      char *mem = kalloc();
+      if(mem == 0){
+        cprintf("out of memory\n");
+        // only return for usertests -> memtest
+        proc->killed = 1;
+        return;
+      }
+      memset(mem, 0, PGSIZE);
+      if(mappages(proc->pgdir, (void*)va, PGSIZE, V2P(mem), PTE_W|PTE_U) < 0){
+        kfree(mem);
+        cprintf("mappages failed\n");
+        proc->killed = 1;
+        return;
+      }
+    }
+    switchuvm(proc); //flush TLB
     break;
 
   //PAGEBREAK: 13
