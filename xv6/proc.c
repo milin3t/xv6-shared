@@ -179,45 +179,44 @@ growproc(int n)
   pte_t *pgtab;
   pde_t *pde;
 
+    
   newsz = curproc->sz + n;
-
+    
   if(newsz >= MAXHEAP && strcompare(curproc->name, "usertests")){
     cprintf("growproc: heap headed limit %x\n", PGROUNDDOWN(newsz));
     return -1;
   }
-  
   if(n > 0){
-    // if(PGROUNDDOWN(curproc->tf->esp) <= PGROUNDUP(newsz)){
-    //   cprintf("growproc: heap overflow hip: %x stack %x\n", 
-    //           PGROUNDUP(newsz), PGROUNDDOWN(curproc->tf->esp));
-    //   return -1; 
-    // }
+    if(PGROUNDDOWN(curproc->tf->esp) <= PGROUNDUP(newsz)){
+      cprintf("growproc: hip overflow hip: %x stack %x\n", 
+              PGROUNDUP(newsz), PGROUNDDOWN(curproc->tf->esp));
+      return -1; 
+    }
     curproc->sz = newsz;
     return 0;
   }
   else if(n < 0){//modified
-    pde = &pgdir[PDX(newsz)]; //할당 안되어있을때
-    if(*pde == 0){
-      curproc->sz = newsz;
-      return 0;
-    }
-  
-    pgtab = (pte_t*)P2V(PTE_ADDR(*pde)); //할당안되어있을때
-    if(pgtab[PTX(newsz)] == 0){
-      curproc->sz = newsz;
-      return 0;
-    }
-    
-    //되어있을때 - 기존과 동일일
-    if(((deallocuvm(curproc->pgdir, curproc->sz, curproc->sz + n)))== 0){
-      cprintf("growproc: deallocuvm failed\n");
-      return -1;
+    uint va = PGROUNDUP(newsz); //round up to page boundary
+    for(; va < curproc->sz; va += PGSIZE){
+      pde = &pgdir[PDX(va)];
+      if(*pde == 0){
+        continue;
+      }
+      pgtab = (pte_t*)P2V(PTE_ADDR(*pde));
+      if(pgtab[PTX(va)] == 0){
+        continue;
+      }
+      if(((deallocuvm(curproc->pgdir, va+PGSIZE ,va)))== 0){
+        cprintf("growproc: deallocuvm failed\n");
+        return -1;
+      }
     }
   }
   curproc->sz = newsz;
   switchuvm(curproc); 
   return 0;
 }
+
 
 // Create a new process copying p as the parent.
 // Sets up stack to return as if from system call.
