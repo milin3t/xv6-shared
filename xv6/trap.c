@@ -103,22 +103,22 @@ trap(struct trapframe *tf)
 
     // In user space
     //if between user stack and heap, one page left , consider it as a stack overflow
-    if(PGROUNDDOWN(proc->tf->esp) <= PGROUNDUP(proc->sz) ){//스택에 대해해
-      cprintf("stack overflow  stack: %x , hip : %x\n", 
+    if(PGROUNDDOWN(proc->tf->esp) <= PGROUNDUP(proc->sz) ){ //스택에 대해
+      cprintf("[PGFLT] : stack overflow  stack: %x , hip : %x\n", 
               PGROUNDDOWN(proc->tf->esp), PGROUNDUP(proc->sz));
-      panic("stack overflow");
+      proc->killed = 1;
     }
     else{//allocate a new page for heap
       char *mem = kalloc();
       if(mem == 0){
-        cprintf("out of memory\n");
+        cprintf("[PGFLT] : out of memory\n");
         proc->killed = 1;
         return;
       }
       memset(mem, 0, PGSIZE);
       if(mappages(proc->pgdir, (void*)va, PGSIZE, V2P(mem), PTE_W|PTE_U) < 0){
         kfree(mem);
-        cprintf("mappages failed\n");
+        cprintf("[PGFLT] : mappages failed\n");
         proc->killed = 1;
         return;
       }

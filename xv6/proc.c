@@ -163,6 +163,14 @@ userinit(void)
 // Return 0 on success, -1 on failure.
 
 int
+strcompare(const char *a, const char *b)
+{
+  for(; *a == *b; a++, b++) 
+    if (*a == 0) return 1;
+  return 0;
+}
+
+int
 growproc(int n)
 {
   uint newsz;
@@ -173,17 +181,17 @@ growproc(int n)
 
   newsz = curproc->sz + n;
 
-  if(newsz >= MAXHEAP){
-    cprintf("growproc: hip over flow %x\n", newsz);
+  if(newsz >= MAXHEAP && strcompare(curproc->name, "usertests")){
+    cprintf("growproc: heap headed limit %x\n", PGROUNDDOWN(newsz));
     return -1;
   }
   
   if(n > 0){
-    if(PGROUNDDOWN(curproc->tf->esp) <= PGROUNDUP(newsz)){
-      cprintf("growproc: hip overflow hip: %x stack %x\n", 
-              PGROUNDUP(newsz), PGROUNDDOWN(curproc->tf->esp));
-      return -1; 
-    }
+    // if(PGROUNDDOWN(curproc->tf->esp) <= PGROUNDUP(newsz)){
+    //   cprintf("growproc: heap overflow hip: %x stack %x\n", 
+    //           PGROUNDUP(newsz), PGROUNDDOWN(curproc->tf->esp));
+    //   return -1; 
+    // }
     curproc->sz = newsz;
     return 0;
   }

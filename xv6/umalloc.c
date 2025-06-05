@@ -49,7 +49,6 @@ morecore(uint nu)
   char *p;
   Header *hp;
 
-  // 수정
   if(nu < 4096)
     nu = 4096;
   p = sbrk(nu * sizeof(Header));
